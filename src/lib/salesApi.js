@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL_SALES;
-const PHARMACY_API_URL = import.meta.env.VITE_API_URL_PHARMACY;
+const API_BASE_URL = "/api/sales";      // backend API base URL
+const PHARMACY_API_URL = "/api/pharmacy";
 
 // =======================
 // RECORD SALE
@@ -50,26 +50,32 @@ export const fetchMonthlyProfit = async () => {
 // =======================
 // SALES REPORTS
 // =======================
+
+// Last X days (generic)
 export const fetchSalesLastDays = async (days) => {
   const res = await axios.get(`${API_BASE_URL}/last-days/${days}`);
   return res.data;
 };
 
+// Last 7 days
 export const fetchSalesLast7Days = async () => {
   const res = await axios.get(`${API_BASE_URL}/last-7-days`);
   return res.data;
 };
 
+// Last 30 days
 export const fetchSalesLast30Days = async () => {
   const res = await axios.get(`${API_BASE_URL}/last-30-days`);
   return res.data;
 };
 
+// Sales by month + year
 export const fetchSalesByMonth = async (month, year) => {
   const res = await axios.get(`${API_BASE_URL}/month/${month}/${year}`);
   return res.data;
 };
 
+// Date range filter
 export const fetchSalesDateRange = async (start, end) => {
   const res = await axios.post(`${API_BASE_URL}/range`, { start, end });
   return res.data;
@@ -78,16 +84,20 @@ export const fetchSalesDateRange = async (start, end) => {
 // =======================
 // PROFIT FILTERED ENDPOINTS
 // =======================
+
+// Profit for today
 export const fetchProfitToday = async () => {
   const res = await axios.get(`${API_BASE_URL}/profit/today`);
   return res.data.totalProfit || 0;
 };
 
+// Profit for last 7 days
 export const fetchProfitLast7Days = async () => {
   const res = await axios.get(`${API_BASE_URL}/profit/7days`);
   return res.data.totalProfit || 0;
 };
 
+// Profit for last 30 days
 export const fetchProfitLast30Days = async () => {
   const res = await axios.get(`${API_BASE_URL}/profit/30days`);
   return res.data.totalProfit || 0;
