@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import {
+  createPatient,
+  updatePatient,
+} from "@/lib/patientApi"; // ← your API wrapper
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
 
-export default function PatientDialogForm({ buttonTitle, patientToEdit, onSuccess }) {
+export default function PatientDialogForm({
+  buttonTitle,
+  patientToEdit,
+  onSuccess,
+}) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -64,9 +71,13 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
   }, [isEditing, patientToEdit]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
+  // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -80,13 +91,14 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
       };
 
       if (isEditing) {
-        await axios.put(`/api/patients/id/${patientToEdit._id}`, payload);
+        await updatePatient(patientToEdit._id, payload);
         toast.success("Patient updated successfully!");
       } else {
-        await axios.post("/api/patients/create", payload);
+        await createPatient(payload);
         toast.success("Patient created successfully!");
       }
 
+      // Reset form
       setFormData({
         firstName: "",
         lastName: "",
@@ -104,11 +116,11 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
         nextAppointment: "",
         reason: "",
       });
+
       setOpen(false);
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Operation failed");
+      toast.error(error.response?.data?.error || "Operation failed");
     } finally {
       setLoading(false);
     }
@@ -122,7 +134,9 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
 
       <DialogContent className="bg-white p-6 rounded-lg shadow-lg max-w-lg mx-auto overflow-y-auto max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Update Patient" : "Add New Patient"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Update Patient" : "Add New Patient"}
+          </DialogTitle>
           <DialogDescription>
             Fill out the form to {isEditing ? "update" : "add"} a patient.
           </DialogDescription>
@@ -130,34 +144,39 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Personal Info */}
-          {["firstName", "lastName", "age", "gender", "phone", "address"].map((field) => (
-            <div key={field}>
-              <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
-              {field === "gender" ? (
-                <select
-                  id={field}
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              ) : (
-                <Input
-                  id={field}
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  required
-                />
-              )}
-            </div>
-          ))}
+          {["firstName", "lastName", "age", "gender", "phone", "address"].map(
+            (field) => (
+              <div key={field}>
+                <Label htmlFor={field}>
+                  {field.charAt(0).toUpperCase() + field.slice(1)}
+                </Label>
+
+                {field === "gender" ? (
+                  <select
+                    id={field}
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                ) : (
+                  <Input
+                    id={field}
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    required
+                  />
+                )}
+              </div>
+            )
+          )}
 
           {/* Medical Info */}
           {[
@@ -171,8 +190,9 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
           ].map((field) => (
             <div key={field}>
               <Label htmlFor={field}>
-                {field.replace(/([A-Z])/g, " $1").charAt(0).toUpperCase() +
-                  field.replace(/([A-Z])/g, " $1").slice(1)}
+                {field.replace(/([A-Z])/g, " $1").replace(/^./, (c) =>
+                  c.toUpperCase()
+                )}
               </Label>
               <textarea
                 id={field}
@@ -210,7 +230,11 @@ export default function PatientDialogForm({ buttonTitle, patientToEdit, onSucces
 
           <DialogFooter>
             <Button type="submit" disabled={loading}>
-              {loading ? (isEditing ? "Updating..." : "Creating...") : "Submit"}
+              {loading
+                ? isEditing
+                  ? "Updating..."
+                  : "Creating..."
+                : "Submit"}
             </Button>
           </DialogFooter>
         </form>
