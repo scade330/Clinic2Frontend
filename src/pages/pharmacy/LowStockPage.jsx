@@ -7,12 +7,18 @@ export default function LowStockPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getLowStockPharmacies()
-      .then((data) => {
+    const fetchLowStock = async () => {
+      try {
+        const data = await getLowStockPharmacies(); // uses Vite-aware API
         setItems(data);
+      } catch (err) {
+        console.error("Failed to fetch low stock items:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    };
+
+    fetchLowStock();
   }, []);
 
   return (

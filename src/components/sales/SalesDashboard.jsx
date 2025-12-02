@@ -11,7 +11,7 @@ import {
   fetchProfitToday,
   fetchProfitLast7Days,
   fetchProfitLast30Days,
-} from "../../lib/salesApi.js";
+} from "@/lib/salesApi.js"; // Correct Vite path
 
 const DashboardCard = ({ title, value, color = "bg-indigo-500", onClick }) => (
   <div
@@ -37,9 +37,6 @@ const SalesDashboard = () => {
   const [filter, setFilter] = useState("today"); // today | last7 | last30
   const [deleting, setDeleting] = useState(false);
 
-  // -----------------------------
-  // Load sales & profit based on filter
-  // -----------------------------
   const loadFilteredData = async (filterType) => {
     try {
       let sales = [];
@@ -63,9 +60,6 @@ const SalesDashboard = () => {
     }
   };
 
-  // -----------------------------
-  // Load dashboard data
-  // -----------------------------
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -97,9 +91,6 @@ const SalesDashboard = () => {
     loadData();
   }, [filter]);
 
-  // -----------------------------
-  // Delete sale
-  // -----------------------------
   const handleDelete = async (saleId) => {
     if (!window.confirm("Are you sure you want to delete this sale?")) return;
 
@@ -107,11 +98,14 @@ const SalesDashboard = () => {
       setDeleting(true);
       await fetch(`/api/sales/${saleId}`, { method: "DELETE" });
 
-      // Refresh filtered data
       const refreshedData = await loadFilteredData(filter);
-      setData((prev) => ({ ...prev, sales: refreshedData.sales, totalProfit: refreshedData.totalProfit }));
+      setData((prev) => ({
+        ...prev,
+        sales: refreshedData.sales,
+        totalProfit: refreshedData.totalProfit,
+      }));
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to delete sale.");
+      alert(error.message || "Failed to delete sale.");
     } finally {
       setDeleting(false);
     }
@@ -139,7 +133,9 @@ const SalesDashboard = () => {
         ].map((btn) => (
           <button
             key={btn.value}
-            className={`px-4 py-2 rounded-lg ${filter === btn.value ? "bg-indigo-600 text-white" : "bg-gray-200"}`}
+            className={`px-4 py-2 rounded-lg ${
+              filter === btn.value ? "bg-indigo-600 text-white" : "bg-gray-200"
+            }`}
             onClick={() => setFilter(btn.value)}
           >
             {btn.label}
@@ -153,13 +149,13 @@ const SalesDashboard = () => {
           title="Total Profit"
           value={`$${data.totalProfit.toFixed(2)}`}
           color="bg-emerald-600 hover:bg-emerald-700"
-          onClick={() => navigate("/profitpage")} // Optional navigation
+          onClick={() => navigate("/profitpage")}
         />
         <DashboardCard
           title="Top Selling Drug"
           value={data.topSelling[0]?._id || "N/A"}
           color="bg-sky-600 hover:bg-sky-700"
-          onClick={() => navigate("/topsellingpage")} // Optional navigation
+          onClick={() => navigate("/topsellingpage")}
         />
         <DashboardCard
           title="Low Stock Items"
@@ -169,7 +165,7 @@ const SalesDashboard = () => {
         />
       </div>
 
-      {/* Filtered Sales Table */}
+      {/* Sales Table */}
       <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100 overflow-x-auto">
         <h3 className="text-2xl font-bold mb-4 text-gray-800">
           📝 Sales (
