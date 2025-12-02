@@ -1,27 +1,48 @@
+// src/components/sales/RecordSalePage.jsx
 import React, { useState, useEffect } from "react";
-import { fetchAllDrugs, recordNewSale } from "@/lib/salesApi.js";
+import { fetchAllDrugs, recordNewSale } from "../../lib/salesApi.js"; // Vite relative path
 
 export default function RecordSalePage() {
-  const [drugs, setDrugs] = useState([]);
+  const [drugs, setDrugs] = useState([]); // always an array
   const [selectedDrug, setSelectedDrug] = useState("");
-  const [quantity, setQuantity] = useState("1"); // string for input
+  const [quantity, setQuantity] = useState("1"); // string for controlled input
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true); // loading for API fetch
 
+  // -----------------------------
   // Fetch all pharmacy items
+  // -----------------------------
   useEffect(() => {
     const loadDrugs = async () => {
-      const data = await fetchAllDrugs();
-      setDrugs(data);
+      try {
+        const data = await fetchAllDrugs();
+        console.log("Fetched drugs:", data); // debug API response
+        setDrugs(Array.isArray(data) ? data : []); // ensure array
+      } catch (error) {
+        console.error("Error fetching drugs:", error);
+        alert("Failed to load pharmacy items.");
+      } finally {
+        setFetching(false);
+      }
     };
     loadDrugs();
   }, []);
 
+  // -----------------------------
+  // Handle recording a sale
+  // -----------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     const qty = Number(quantity);
 
-    if (!selectedDrug) return alert("Please select a drug.");
-    if (qty <= 0) return alert("Quantity must be greater than 0.");
+    if (!selectedDrug) {
+      alert("Please select a drug.");
+      return;
+    }
+    if (qty <= 0) {
+      alert("Quantity must be greater than 0.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -29,16 +50,28 @@ export default function RecordSalePage() {
         pharmacyItem: selectedDrug,
         quantitySold: qty,
       });
+
       alert(`Sale recorded successfully: ${res?.sale?.itemName || "Unknown"}`);
       setSelectedDrug("");
       setQuantity("1");
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to record sale.");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Failed to record sale.");
     } finally {
       setLoading(false);
     }
   };
+
+  // -----------------------------
+  // Render
+  // -----------------------------
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin w-10 h-10 border-4 border-gray-400 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -48,6 +81,7 @@ export default function RecordSalePage() {
       >
         <h2 className="text-3xl font-bold mb-6 text-center">Record New Sale</h2>
 
+        {/* Drug selector */}
         <div>
           <label className="block mb-1 font-medium">Select Drug</label>
           <select
@@ -56,6 +90,7 @@ export default function RecordSalePage() {
             onChange={(e) => setSelectedDrug(e.target.value)}
           >
             <option value="">-- Select a drug --</option>
+            {drugs.length === 0 && <option disabled>No drugs available</option>}
             {drugs.map((d) => (
               <option key={d._id} value={d._id}>
                 {d.itemName} (Stock: {d.quantityInStock})
@@ -64,6 +99,7 @@ export default function RecordSalePage() {
           </select>
         </div>
 
+        {/* Quantity */}
         <div>
           <label className="block mb-1 font-medium">Quantity Sold</label>
           <input
@@ -75,9 +111,10 @@ export default function RecordSalePage() {
           />
         </div>
 
+        {/* Submit */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || drugs.length === 0}
           className="w-full bg-indigo-600 text-white p-3 rounded hover:bg-indigo-700 transition disabled:opacity-50"
         >
           {loading ? "Recording..." : "Record Sale"}
