@@ -17,12 +17,14 @@ export const recordNewSale = async (saleData) => {
 export const fetchAllDrugs = async () => {
   try {
     const res = await axios.get(PHARMACY_API_URL, { withCredentials: true });
-    return Array.isArray(res.data) ? res.data : []; // ensure always an array
+    // If backend wraps data inside { success, data }
+    return Array.isArray(res.data) ? res.data : Array.isArray(res.data.data) ? res.data.data : [];
   } catch (err) {
     console.error("Error fetching drugs:", err);
     return [];
   }
 };
+
 
 export const fetchDrugById = async (id) => {
   const res = await axios.get(`${PHARMACY_API_URL}/${id}`, { withCredentials: true });
