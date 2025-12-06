@@ -110,9 +110,7 @@ export default function Header() {
                   <p className="text-gray-600">
                     Regular check-ups, condition management, and personalized health planning.
                   </p>
-                  <Link to="/services/primary" className="text-blue-600 font-semibold hover:text-blue-800">
-                    View Details →
-                  </Link>
+                 
                 </div>
 
                 {/* CARD 2 */}
@@ -121,9 +119,7 @@ export default function Header() {
                   <p className="text-gray-600">
                     Advanced labs and imaging for fast, accurate assessments.
                   </p>
-                  <Link to="/services/diagnostics" className="text-blue-600 font-semibold hover:text-blue-800">
-                    View Details →
-                  </Link>
+                 
                 </div>
 
                 {/* CARD 3 */}
@@ -132,9 +128,7 @@ export default function Header() {
                   <p className="text-gray-600">
                     Preventative care, nutrition guidance, and lifestyle planning.
                   </p>
-                  <Link to="/services/wellness" className="text-blue-600 font-semibold hover:text-blue-800">
-                    View Details →
-                  </Link>
+          
                 </div>
               </div>
             </div>
