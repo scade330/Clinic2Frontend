@@ -4,13 +4,11 @@ import { useNavigate } from "react-router-dom";
 import PatientDialogForm from "../../components/patient/PatientDialogForm";
 import { getAllPatients, deletePatient } from "../../lib/patientApi";
 
-// Helper Icons
 const EditIcon = () => <span role="img" aria-label="edit">✏️</span>;
 const DeleteIcon = () => <span role="img" aria-label="delete">🗑️</span>;
 
-// Format date helper
 const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
+  if (!dateString) return "None";
   try {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -19,11 +17,10 @@ const formatDate = (dateString) => {
       day: "numeric",
     });
   } catch {
-    return dateString;
+    return "None";
   }
 };
 
-// Expanded patient details row
 const PatientDetailsRow = ({ patient }) => (
   <tr className="bg-gray-50 border-t border-b border-gray-200">
     <td colSpan="7" className="p-4">
@@ -33,16 +30,18 @@ const PatientDetailsRow = ({ patient }) => (
           ["Medical History", patient.medicalHistory],
           ["Current Medications", patient.currentMedications],
           ["Allergies", patient.allergies],
+          ["Diagnosis", patient.diagnosis],
           ["Physical Exam", patient.physicalExam],
           ["Lab Results", patient.labResults],
-          ["Diagnosis", patient.diagnosis],
-          ["Treatment Plan", patient.treatmentPlan],
+          ["Medication", patient.medication],
+          ["Dosage", patient.dosage],
+          ["Instructions", patient.instructions],
           ["Next Appointment", patient.nextAppointment ? formatDate(patient.nextAppointment) : "None"],
-          ["Reason for Visit", patient.reason],
+          ["Reason", patient.reason],
         ].map(([label, value]) => (
           <div key={label} className="flex flex-col">
             <span className="font-semibold text-gray-700">{label}:</span>
-            <span className="text-gray-600 truncate">{value || "N/A"}</span>
+            <span className="text-gray-600 truncate">{value !== undefined && value !== null && value !== "" ? value : "None"}</span>
           </div>
         ))}
       </div>
@@ -53,7 +52,7 @@ const PatientDetailsRow = ({ patient }) => (
 export default function PatientList() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
   const navigate = useNavigate();
 
@@ -61,8 +60,8 @@ export default function PatientList() {
     setLoading(true);
     try {
       const response = await getAllPatients();
-      const patientData = Array.isArray(response) ? response : response?.patients || [];
-      setPatients(patientData);
+      const data = Array.isArray(response) ? response : response?.patients || [];
+      setPatients(data);
     } catch (err) {
       console.error("Failed to load patients:", err);
       toast.error("Failed to load patient data.");
@@ -90,16 +89,21 @@ export default function PatientList() {
   const toggleRow = (id) => setExpandedRow(expandedRow === id ? null : id);
 
   const filteredPatients = useMemo(() => {
-    return patients.filter((p) =>
-      `${p.firstName} ${p.lastName} ${p.phone} ${p.diagnosis}`.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [patients, search]);
+    const s = searchTerm.toLowerCase();
+    return patients.filter((p) => {
+      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+      return (
+        fullName.includes(s) ||
+        (p.diagnosis || "").toLowerCase().includes(s) ||
+        (p.phone || "").toLowerCase().includes(s) ||
+        (p.gender || "").toLowerCase().includes(s) ||
+        String(p.age || "").toLowerCase().includes(s)
+      );
+    });
+  }, [patients, searchTerm]);
 
-  // -----------------------
-  // Download CSV function
-  // -----------------------
   const downloadCSV = () => {
-    if (!filteredPatients.length) {
+    if (!filteredPatients || filteredPatients.length === 0) {
       toast.error("No patient data to download.");
       return;
     }
@@ -115,28 +119,38 @@ export default function PatientList() {
       "Current Medications",
       "Allergies",
       "Diagnosis",
-      "Treatment Plan",
-      "Next Appointment"
+      "Physical Exam",
+      "Lab Results",
+      "Medication",
+      "Dosage",
+      "Instructions",
+      "Next Appointment",
+      "Reason",
     ];
 
-    const rows = filteredPatients.map(p => [
-      p.firstName || "",
-      p.lastName || "",
-      p.age || "",
-      p.gender || "",
-      p.phone || "",
-      p.address || "",
-      p.medicalHistory || "",
-      p.currentMedications || "",
-      p.allergies || "",
-      p.diagnosis || "",
-      p.treatmentPlan || "",
-      p.nextAppointment || ""
+    const rows = filteredPatients.map((p) => [
+      p.firstName || "None",
+      p.lastName || "None",
+      p.age || "None",
+      p.gender || "None",
+      p.phone || "None",
+      p.address || "None",
+      p.medicalHistory || "None",
+      p.currentMedications || "None",
+      p.allergies || "None",
+      p.diagnosis || "None",
+      p.physicalExam || "None",
+      p.labResults || "None",
+      p.medication || "None",
+      p.dosage || "None",
+      p.instructions || "None",
+      p.nextAppointment ? formatDate(p.nextAppointment) : "None",
+      p.reason || "None",
     ]);
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
-      [headers, ...rows].map(row => row.join(",")).join("\n");
+      [headers, ...rows].map((row) => row.join(",")).join("\n");
 
     const blob = new Blob([decodeURIComponent(encodeURI(csvContent))], {
       type: "text/csv;charset=utf-8;",
@@ -144,10 +158,8 @@ export default function PatientList() {
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
     link.setAttribute("download", "patients_data.csv");
-
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -178,10 +190,10 @@ export default function PatientList() {
 
       <input
         type="text"
-        placeholder="Search by name, phone, or diagnosis..."
-        className="w-full px-3 py-2 mb-4 border rounded-lg focus:ring-blue-500 focus:border-blue-500 transition"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name, diagnosis, phone, gender, age..."
+        className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 mb-4"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
       />
 
       <div className="max-h-[70vh] overflow-y-auto">
@@ -197,6 +209,7 @@ export default function PatientList() {
               <th className="p-3 border-b border-gray-200 text-center">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {loading && (
               <tr>
@@ -236,7 +249,6 @@ export default function PatientList() {
                         patientToEdit={p}
                         buttonTitle={<EditIcon />}
                         onSuccess={loadPatients}
-                        className="text-yellow-600 hover:text-yellow-800 p-1 rounded"
                       />
                       <button
                         onClick={(e) => {

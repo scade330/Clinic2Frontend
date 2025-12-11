@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  createPatient,
-  updatePatient,
-} from "@/lib/patientApi"; // ← your API wrapper
+import { createPatient, updatePatient } from "@/lib/patientApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +13,36 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
+
+function PrescriptionFields({ prescriptionData, setPrescriptionData }) {
+  const handleChange = (e) =>
+    setPrescriptionData({
+      ...prescriptionData,
+      [e.target.name]: e.target.value,
+    });
+
+  return (
+    <div className="mb-4 p-4 border border-purple-200 rounded-lg bg-purple-50">
+      <h3 className="text-lg font-bold text-purple-800 mb-2">Prescription</h3>
+
+      {["medication", "dosage", "instructions"].map((field) => (
+        <div key={field} className="mb-2">
+          <Label className="capitalize" htmlFor={field}>
+            {field}
+          </Label>
+          <textarea
+            name={field}
+            id={field}
+            value={prescriptionData[field]}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded-md"
+            rows={2}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function PatientDialogForm({
   buttonTitle,
@@ -35,17 +62,20 @@ export default function PatientDialogForm({
     diagnosis: "",
     physicalExam: "",
     labResults: "",
-    treatmentPlan: "",
     nextAppointment: "",
     reason: "",
   });
 
+  const [prescriptionData, setPrescriptionData] = useState({
+    medication: "",
+    dosage: "",
+    instructions: "",
+  });
+
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-
   const isEditing = !!patientToEdit;
 
-  // Prefill form when editing
   useEffect(() => {
     if (isEditing && patientToEdit) {
       setFormData({
@@ -61,23 +91,26 @@ export default function PatientDialogForm({
         diagnosis: patientToEdit.diagnosis || "",
         physicalExam: patientToEdit.physicalExam || "",
         labResults: patientToEdit.labResults || "",
-        treatmentPlan: patientToEdit.treatmentPlan || "",
         nextAppointment: patientToEdit.nextAppointment
           ? new Date(patientToEdit.nextAppointment).toISOString().slice(0, 16)
           : "",
         reason: patientToEdit.reason || "",
       });
+
+      setPrescriptionData({
+        medication: patientToEdit.medication || "",
+        dosage: patientToEdit.dosage || "",
+        instructions: patientToEdit.instructions || "",
+      });
     }
   }, [isEditing, patientToEdit]);
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
+  const handleChange = (e) =>
+    setFormData({
+      ...formData,
       [e.target.name]: e.target.value,
-    }));
-  };
+    });
 
-  // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -85,6 +118,7 @@ export default function PatientDialogForm({
     try {
       const payload = {
         ...formData,
+        ...prescriptionData,
         nextAppointment: formData.nextAppointment
           ? new Date(formData.nextAppointment)
           : null,
@@ -112,15 +146,20 @@ export default function PatientDialogForm({
         diagnosis: "",
         physicalExam: "",
         labResults: "",
-        treatmentPlan: "",
         nextAppointment: "",
         reason: "",
       });
 
+      setPrescriptionData({
+        medication: "",
+        dosage: "",
+        instructions: "",
+      });
+
       setOpen(false);
       if (onSuccess) onSuccess();
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Operation failed");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Operation failed");
     } finally {
       setLoading(false);
     }
@@ -143,7 +182,7 @@ export default function PatientDialogForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Personal Info */}
+          {/* PERSONAL INFO */}
           {["firstName", "lastName", "age", "gender", "phone", "address"].map(
             (field) => (
               <div key={field}>
@@ -178,7 +217,7 @@ export default function PatientDialogForm({
             )
           )}
 
-          {/* Medical Info */}
+          {/* MEDICAL INFO */}
           {[
             "medicalHistory",
             "currentMedications",
@@ -186,13 +225,10 @@ export default function PatientDialogForm({
             "diagnosis",
             "physicalExam",
             "labResults",
-            "treatmentPlan",
           ].map((field) => (
             <div key={field}>
               <Label htmlFor={field}>
-                {field.replace(/([A-Z])/g, " $1").replace(/^./, (c) =>
-                  c.toUpperCase()
-                )}
+                {field.replace(/([A-Z])/g, " $1").toUpperCase()}
               </Label>
               <textarea
                 id={field}
@@ -205,7 +241,13 @@ export default function PatientDialogForm({
             </div>
           ))}
 
-          {/* Next Appointment */}
+          {/* PRESCRIPTION */}
+          <PrescriptionFields
+            prescriptionData={prescriptionData}
+            setPrescriptionData={setPrescriptionData}
+          />
+
+          {/* NEXT APPOINTMENT */}
           <div>
             <Label htmlFor="nextAppointment">Next Appointment</Label>
             <Input
@@ -217,7 +259,7 @@ export default function PatientDialogForm({
             />
           </div>
 
-          {/* Reason */}
+          {/* REASON */}
           <div>
             <Label htmlFor="reason">Reason</Label>
             <Input

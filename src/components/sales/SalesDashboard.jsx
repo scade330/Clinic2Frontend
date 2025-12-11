@@ -158,13 +158,13 @@ const SalesDashboard = () => {
           title="Total Profit"
           value={`$${data.totalProfit.toFixed(2)}`}
           color="bg-emerald-600 hover:bg-emerald-700"
-          onClick={() => navigate("/profitpage")}
+        
         />
         <DashboardCard
           title="Top Selling Drug"
           value={data.topSelling[0]?._id || "N/A"}
           color="bg-sky-600 hover:bg-sky-700"
-          onClick={() => navigate("/topsellingpage")}
+         
         />
         <DashboardCard
           title="Low Stock Items"

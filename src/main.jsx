@@ -21,7 +21,6 @@ import RecordSalePage from './pages/sales/RecordSalePage.jsx'
 import SalesDashboardPage from './pages/sales/SalesDashboard.jsx'
 import LowStockPage from './pages/pharmacy/LowStockPage.jsx'
 
-
 const router = createBrowserRouter([
   {
     path: "/",
@@ -91,6 +90,7 @@ const router = createBrowserRouter([
         element: <LowStockPage/>
       }, 
 
+   
       
     ]
   }

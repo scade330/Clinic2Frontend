@@ -1,47 +1,59 @@
 import axios from "axios";
 
-// Ensure trailing slash is correct
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_URL; // e.g., http://localhost:5000
 const API = `${BASE_URL}/api/patients`;
 
-// CREATE
+// ---------------- CREATE ----------------
 export const createPatient = async (data) => {
-  const res = await axios.post(`${API}/create`, data, {
-    withCredentials: true,
-  });
-  return res.data;
+  try {
+    const res = await axios.post(`${API}/create`, data, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    console.error("Create patient error:", error.response || error);
+    throw error;
+  }
 };
 
-// READ ALL
+// ---------------- READ ALL ----------------
 export const getAllPatients = async () => {
-  const res = await axios.get(`${API}/all`, {
-    withCredentials: true,
-  });
-
-  // Backend returns { patients: [...] }
-  return res.data.patients; // ✅ return clean array
+  try {
+    const res = await axios.get(`${API}/all`, { withCredentials: true });
+    return res.data.patients || []; // ensure an array
+  } catch (error) {
+    console.error("Get all patients error:", error.response || error);
+    throw error;
+  }
 };
 
-// READ ONE
+// ---------------- READ ONE ----------------
 export const getPatientById = async (id) => {
-  const res = await axios.get(`${API}/id/${id}`, {
-    withCredentials: true,
-  });
-  return res.data;
+  try {
+    const res = await axios.get(`${API}/id/${id}`, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    console.error(`Get patient ${id} error:`, error.response || error);
+    throw error;
+  }
 };
 
-// UPDATE
+// ---------------- UPDATE ----------------
 export const updatePatient = async (id, data) => {
-  const res = await axios.put(`${API}/id/${id}`, data, {
-    withCredentials: true,
-  });
-  return res.data;
+  try {
+    const res = await axios.put(`${API}/id/${id}`, data, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    console.error(`Update patient ${id} error:`, error.response || error);
+    throw error;
+  }
 };
 
-// DELETE
+// ---------------- DELETE ----------------
 export const deletePatient = async (id) => {
-  const res = await axios.delete(`${API}/id/${id}`, {
-    withCredentials: true,
-  });
-  return res.data;
+  try {
+    const res = await axios.delete(`${API}/id/${id}`, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    console.error(`Delete patient ${id} error:`, error.response || error);
+    throw error;
+  }
 };
