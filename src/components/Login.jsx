@@ -20,34 +20,38 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, user } = useUser();
 
+  // Redirect if already logged in
   useEffect(() => {
     if (user) navigate("/center");
   }, [user, navigate]);
 
-  const handleInputChange = (event) => {
-    setFormData({ ...formData, [event.target.id]: event.target.value });
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
 
     try {
-      // Ensure axios sends cookies (credentials)
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/api/user/login-user`,
-        formData,
-        {
-          withCredentials: true, // Important for sending cookies
-        }
-      );
+      const { data } = await axios.post("/api/user/login-user", formData, {
+        withCredentials: true, // cookies enabled
+      });
 
       toast.success("Successfully logged in!");
-      login(data.user, data.expiresIn);
+      login(data.user || data); // store user in context
       navigate("/center");
-    } catch (e) {
-      toast.error(e?.response?.data || "Login failed");
-      console.error(e);
+    } catch (err) {
+      if (err.response) {
+        toast.error(err.response?.data?.message || "Login failed");
+        console.error("Backend error:", err.response);
+      } else if (err.request) {
+        toast.error("No response from server");
+        console.error("No response:", err.request);
+      } else {
+        toast.error("Login error");
+        console.error("Error:", err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,17 +66,16 @@ export default function Login() {
             Welcome Back!
           </h1>
           <p className="text-xl text-white/90 font-light">
-            Login to access your high-power dashboard and manage resources efficiently. 
-            Track all your critical data, treatments, and reports in a single, secure environment.
+            Login to access your dashboard and manage resources efficiently. 
           </p>
           <div className="mt-6">
-             <Button
-                variant="outline"
-                onClick={() => navigate("/intro")}
-                className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-purple-700 transition duration-300 py-3 px-8 text-lg rounded-full"
-              >
-                Learn More
-              </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/intro")}
+              className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-purple-700 transition duration-300 py-3 px-8 text-lg rounded-full"
+            >
+              Learn More
+            </Button>
           </div>
         </div>
 
@@ -83,14 +86,13 @@ export default function Login() {
                 Secure Login 🔒
               </CardTitle>
               <CardDescription className="text-lg text-gray-600 mt-2">
-                Enter your credentials to continue your mission
+                Enter your credentials to continue
               </CardDescription>
             </CardHeader>
 
             <CardContent>
               <form onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-8 mt-6">
-                  
                   <div className="flex flex-col space-y-3">
                     <Label htmlFor="email" className="text-lg font-semibold text-gray-700">
                       Email Address
@@ -129,7 +131,6 @@ export default function Login() {
                 </div>
               </form>
             </CardContent>
-
           </Card>
         </div>
       </div>

@@ -1,277 +1,192 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import { createPatient } from "../../lib/patientApi";
-import Header from "../Header";
+
+// Options strictly following the Mongoose Schema Enums
+const REGIONS = ["Awdal", "Maroodi Jeex", "Sanaag", "Sool", "Togdheer", "Saaxil"];
+const PROVIDERS = ["Public Hospital", "Private Hospital", "MCH", "Clinic", "Health Center"];
+const GENDERS = ["Male", "Female", "Other"];
+const DIAGNOSES = [
+  "Acute Respiratory Infection (ARI)", "Pneumonia", "Diarrheal Disease", "Malaria",
+  "Tuberculosis (TB)", "Typhoid Fever", "Intestinal Worms", "Skin Infections",
+  "Measles", "Hypertension", "Diabetes Mellitus", "Asthma", "Maternal", "Neonatal", "Other",
+];
+
+const INITIAL_STATE = {
+  firstName: "", lastName: "", age: "", gender: "", phone: "",
+  address: "", region: "", district: "", healthProviderType: "",
+  medicalHistory: "", currentMedications: "", allergies: "",
+  diagnosis: "", diagnosisOther: "", physicalExam: "", labResults: "",
+  treatmentPlan: [{ medication: "", dosage: "", instructions: "" }],
+  vaccinations: [{ vaccineName: "", doseNumber: 1, dateGiven: "", administeredBy: "", notes: "" }],
+  nextAppointment: "", reason: "",
+};
 
 export default function PatientForm() {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    age: "",
-    gender: "",
-    phone: "",
-    address: "",
-    medicalHistory: "",
-    currentMedications: "",
-    allergies: "",
-    diagnosis: "",
-    physicalExam: "",
-    labResults: "",
-    // Changed: Replace single string fields with an array structure
-    // This array of objects is used ONLY for managing dynamic inputs on the frontend
-    prescriptions: [
-      { medication: "", dosage: "", instructions: "" } // Start with one empty prescription
-    ], 
-    nextAppointment: "",
-    reason: "",
-  });
-
+  const [formData, setFormData] = useState(INITIAL_STATE);
   const [loading, setLoading] = useState(false);
 
-  // Handles changes for all non-array fields (Personal, Medical, Appointment)
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // NEW: Handles changes for medication fields (items in the prescriptions array)
-  const handlePrescriptionChange = (index, e) => {
-    const newPrescriptions = formData.prescriptions.map((item, i) => {
-      if (index === i) {
-        // Update the specific property (medication, dosage, or instructions)
-        return { ...item, [e.target.name]: e.target.value };
-      }
-      return item;
-    });
-    setFormData({ ...formData, prescriptions: newPrescriptions });
+  const updateArrayField = (index, field, e) => {
+    const { name, value } = e.target;
+    const newArr = [...formData[field]];
+    newArr[index] = { ...newArr[index], [name]: value };
+    setFormData(prev => ({ ...prev, [field]: newArr }));
   };
 
-  // NEW: Adds a new empty medication object to the prescriptions array
-  const addPrescription = () => {
-    setFormData({
-      ...formData,
-      prescriptions: [
-        ...formData.prescriptions,
-        { medication: "", dosage: "", instructions: "" },
-      ],
-    });
-  };
-
-  // NEW: Removes a medication object from the prescriptions array
-  const removePrescription = (index) => {
-    const newPrescriptions = formData.prescriptions.filter((_, i) => i !== index);
-    setFormData({ ...formData, prescriptions: newPrescriptions });
-  };
+  const addRow = (field, schema) => setFormData(prev => ({ ...prev, [field]: [...prev[field], schema] }));
+  const removeRow = (index, field) => setFormData(prev => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      // 1. Clean and filter the prescriptions array of objects
-      const cleanedPrescriptions = formData.prescriptions
-        .map(p => ({
-            medication: p.medication.trim(),
-            dosage: p.dosage.trim(),
-            instructions: p.instructions.trim(),
-        }))
-        // Filter out prescriptions where the medication name is completely empty
-        .filter(p => p.medication); 
-        
-      // 2. CRITICAL: Separate the array of objects into three parallel arrays of strings
-      const medicationArray = cleanedPrescriptions.map(p => p.medication || "None"); // Ensure 'None' for non-medication fields
-      const dosageArray = cleanedPrescriptions.map(p => p.dosage || "None");
-      const instructionsArray = cleanedPrescriptions.map(p => p.instructions || "None");
-
-      // Prepare payload according to schema
       const payload = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        age: formData.age ? parseInt(formData.age, 10) : undefined,
-        gender: formData.gender,
-        phone: formData.phone.replace(/\D/g, ""), 
-        address: formData.address.trim(),
-        medicalHistory: formData.medicalHistory.trim() || "None",
-        currentMedications: formData.currentMedications.trim() || "None",
-        allergies: formData.allergies.trim() || "None",
-        diagnosis: formData.diagnosis.trim() || "None",
-        physicalExam: formData.physicalExam.trim() || "None",
-        labResults: formData.labResults.trim() || "None",
-        
-        // Use the three parallel arrays for the final payload
-        medication: medicationArray, 
-        dosage: dosageArray, 
-        instructions: instructionsArray, 
-        
-        nextAppointment: formData.nextAppointment
-          ? new Date(formData.nextAppointment)
-          : null,
-        reason: formData.reason.trim() || "None",
+        ...formData,
+        age: Number(formData.age),
+        diagnosis: formData.diagnosis === "Other" ? formData.diagnosisOther : formData.diagnosis,
+        // Clean dynamic arrays of empty entries
+        treatmentPlan: formData.treatmentPlan.filter(t => t.medication.trim()),
+        vaccinations: formData.vaccinations.filter(v => v.vaccineName.trim()).map(v => ({
+          ...v, doseNumber: Number(v.doseNumber), dateGiven: v.dateGiven || null
+        })),
+        nextAppointment: formData.nextAppointment || null
       };
 
-      console.log("Payload sending to API:", payload);
-
       await createPatient(payload);
-      alert("Patient created successfully!");
-
-      // Reset form
-      setFormData({
-        firstName: "",
-        lastName: "",
-        age: "",
-        gender: "",
-        phone: "",
-        address: "",
-        medicalHistory: "",
-        currentMedications: "",
-        allergies: "",
-        diagnosis: "",
-        physicalExam: "",
-        labResults: "",
-        // Reset prescriptions array
-        prescriptions: [{ medication: "", dosage: "", instructions: "" }],
-        nextAppointment: "",
-        reason: "",
-      });
-    } catch (error) {
-      console.error(
-        "Error creating patient:",
-        error.response?.data || error.message
-      );
-      alert(error.response?.data?.error || "Error creating patient");
+      toast.success("Patient Record Saved!");
+      setFormData(INITIAL_STATE);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Error saving patient data.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <Header />
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-8">
-        <form
-          className="w-full bg-white shadow-2xl rounded-xl p-8 md:p-12"
-          onSubmit={handleSubmit}
-        >
-          <h2 className="text-4xl font-extrabold text-center mb-10 text-gray-900">
-            Create Patient Record
-          </h2>
+    <div className="max-w-6xl mx-auto p-4 lg:p-10 bg-gray-50 min-h-screen font-sans">
+      <Toaster position="top-center" />
+      <form onSubmit={handleSubmit} className="bg-white shadow-xl rounded-3xl p-6 lg:p-12 space-y-10 border border-gray-200">
+        
+        <header className="border-l-8 border-blue-600 pl-6">
+          <h1 className="text-4xl font-black text-slate-800">Patient Intake</h1>
+          <p className="text-slate-500">Ensure all required (*) fields are completed.</p>
+        </header>
 
-          {/* Personal Info */}
-          <div className="mb-10 p-6 border border-blue-100 rounded-xl bg-blue-50">
-            <h3 className="text-2xl font-bold mb-6 pb-3 border-b-2 border-blue-300 text-blue-800">
-              Personal Info
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input type="text" name="firstName" placeholder="First Name" value={formData.firstName} onChange={handleChange} required className="p-4 border-2 border-gray-400 rounded-lg text-lg font-semibold" />
-              <input type="text" name="lastName" placeholder="Last Name" value={formData.lastName} onChange={handleChange} required className="p-4 border-2 border-gray-400 rounded-lg text-lg font-semibold" />
-              <input type="number" name="age" placeholder="Age" value={formData.age} onChange={handleChange} min="0" max="120" required className="p-4 border-2 border-gray-400 rounded-lg text-lg font-semibold" />
-              <select name="gender" value={formData.gender} onChange={handleChange} required className="p-4 border-2 border-gray-400 rounded-lg text-lg font-semibold bg-white">
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-              <input type="text" name="phone" placeholder="Phone Number (7–15 digits)" value={formData.phone} onChange={handleChange} required className="p-4 border-2 border-gray-400 rounded-lg text-lg font-semibold" />
-              <input type="text" name="address" placeholder="Address" value={formData.address} onChange={handleChange} required className="p-4 border-2 border-gray-400 rounded-lg text-lg font-semibold" />
-            </div>
+        {/* Section: Demographics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Input label="First Name *" name="firstName" value={formData.firstName} onChange={handleChange} required />
+          <Input label="Last Name *" name="lastName" value={formData.lastName} onChange={handleChange} required />
+          <Input label="Age *" name="age" type="number" value={formData.age} onChange={handleChange} required />
+          <Select label="Gender *" name="gender" options={GENDERS} value={formData.gender} onChange={handleChange} required />
+          <Input label="Phone (Digits only) *" name="phone" value={formData.phone} onChange={handleChange} required />
+          <Select label="Provider Type *" name="healthProviderType" options={PROVIDERS} value={formData.healthProviderType} onChange={handleChange} required />
+        </div>
+
+        {/* Section: Geography */}
+        <div className="bg-slate-50 p-8 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
+          <Input label="Address *" name="address" value={formData.address} onChange={handleChange} required />
+          <Select label="Region *" name="region" options={REGIONS} value={formData.region} onChange={handleChange} required />
+          <Input label="District *" name="district" value={formData.district} onChange={handleChange} required />
+        </div>
+
+        {/* Section: Clinical Data */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-widest">Assessment</h3>
+            <TextArea label="Physical Examination" name="physicalExam" value={formData.physicalExam} onChange={handleChange} />
+            <TextArea label="Laboratory Results" name="labResults" value={formData.labResults} onChange={handleChange} />
           </div>
-
-          {/* Medical Info */}
-          <div className="mb-10 p-6 border border-green-100 rounded-xl bg-green-50">
-            <h3 className="text-2xl font-bold mb-6 pb-3 border-b-2 border-green-300 text-green-800">
-              Medical Info
-            </h3>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {[{ name: "medicalHistory", placeholder: "Medical History" }, { name: "currentMedications", placeholder: "Current Medications" }, { name: "allergies", placeholder: "Allergies" }, { name: "diagnosis", placeholder: "Diagnosis" }].map((field) => (<textarea key={field.name} name={field.name} placeholder={field.placeholder} value={formData[field.name]} onChange={handleChange} className="p-4 border-2 border-gray-400 rounded-lg h-40 text-lg font-medium" />))}
-              <textarea name="physicalExam" placeholder="Physical Examination" value={formData.physicalExam} onChange={handleChange} className="p-4 border-2 border-gray-400 rounded-lg h-40 text-lg font-medium md:col-span-2" />
-              <textarea name="labResults" placeholder="Laboratory Results" value={formData.labResults} onChange={handleChange} className="p-4 border-2 border-gray-400 rounded-lg h-40 text-lg font-medium md:col-span-2" />
-            </div>
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-widest">Medical History</h3>
+            <Select label="Diagnosis" name="diagnosis" options={DIAGNOSES} value={formData.diagnosis} onChange={handleChange} />
+            {formData.diagnosis === "Other" && <Input label="Specify Diagnosis" name="diagnosisOther" value={formData.diagnosisOther} onChange={handleChange} />}
+            <TextArea label="Health History / Allergies" name="medicalHistory" value={formData.medicalHistory} onChange={handleChange} />
           </div>
+        </div>
 
-          {/* Treatment Plan - DYNAMIC FIELDS */}
-          <div className="mb-10 p-6 border border-purple-100 rounded-xl bg-purple-50">
-            <h3 className="text-2xl font-bold mb-6 pb-3 border-b-2 border-purple-300 text-purple-800">
-              Treatment Plan (Medications)
-            </h3>
-            
-            {/* Map over the prescriptions array to render the fields for each medication */}
-            {formData.prescriptions.map((prescription, index) => (
-              <div 
-                key={index} 
-                className="mb-8 p-4 border border-purple-200 rounded-lg shadow-inner bg-white"
-              >
-                <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-xl font-bold text-purple-700">
-                        Medication #{index + 1}
-                    </h4>
-                    {/* Allow removal if there is more than one prescription */}
-                    {formData.prescriptions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removePrescription(index)}
-                        className="text-red-600 hover:text-red-800 font-bold p-1 transition duration-200"
-                        title="Remove Medication"
-                      >
-                        &#10005; Remove
-                      </button>
-                    )}
+        {/* Dynamic Treatment & Vaccinations */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <ArrayField title="Medications" color="purple" onAdd={() => addRow("treatmentPlan", { medication: "", dosage: "", instructions: "" })}>
+            {formData.treatmentPlan.map((t, i) => (
+              <div key={i} className="bg-white p-4 rounded-xl border mb-3 relative shadow-sm">
+                <input name="medication" placeholder="Medicine" value={t.medication} onChange={(e) => updateArrayField(i, "treatmentPlan", e)} className="w-full mb-2 border-b outline-none text-sm" />
+                <div className="flex gap-2">
+                  <input name="dosage" placeholder="Dose" value={t.dosage} onChange={(e) => updateArrayField(i, "treatmentPlan", e)} className="w-1/2 p-2 bg-slate-50 rounded text-xs" />
+                  <input name="instructions" placeholder="Instr." value={t.instructions} onChange={(e) => updateArrayField(i, "treatmentPlan", e)} className="w-1/2 p-2 bg-slate-50 rounded text-xs" />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <input
-                    type="text"
-                    name="medication"
-                    placeholder="Medication Name"
-                    value={prescription.medication}
-                    onChange={(e) => handlePrescriptionChange(index, e)}
-                    className="p-4 border-2 border-gray-400 rounded-lg text-lg font-medium md:col-span-1"
-                  />
-                  <input
-                    type="text"
-                    name="dosage"
-                    placeholder="Dosage (e.g., 5mg, 1 tablet)"
-                    value={prescription.dosage}
-                    onChange={(e) => handlePrescriptionChange(index, e)}
-                    className="p-4 border-2 border-gray-400 rounded-lg text-lg font-medium md:col-span-1"
-                  />
-                  <textarea
-                    name="instructions"
-                    placeholder="Instructions (e.g., Take twice daily with food)"
-                    value={prescription.instructions}
-                    onChange={(e) => handlePrescriptionChange(index, e)}
-                    className="p-4 border-2 border-gray-400 rounded-lg text-lg font-medium h-24 md:col-span-3"
-                  />
-                </div>
+                {formData.treatmentPlan.length > 1 && <RemoveBtn onClick={() => removeRow(i, "treatmentPlan")} />}
               </div>
             ))}
+          </ArrayField>
 
-            <button
-              type="button"
-              onClick={addPrescription}
-              className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200"
-            >
-              + Add Another Medication
-            </button>
-          </div>
-          
-          {/* Next Appointment */}
-          <div className="mb-10 p-6 border border-yellow-100 rounded-xl bg-yellow-50">
-            <h3 className="text-2xl font-bold mb-6 pb-3 border-b-2 border-yellow-300 text-yellow-800">
-              Next Appointment
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input type="datetime-local" name="nextAppointment" value={formData.nextAppointment} onChange={handleChange} className="p-4 border-2 border-gray-400 rounded-lg text-lg font-medium" />
-              <input type="text" name="reason" placeholder="Reason for Appointment" value={formData.reason} onChange={handleChange} className="p-4 border-2 border-gray-400 rounded-lg text-lg font-medium" />
-            </div>
-          </div>
+          <ArrayField title="Vaccinations" color="emerald" onAdd={() => addRow("vaccinations", { vaccineName: "", doseNumber: 1, dateGiven: "", administeredBy: "", notes: "" })}>
+            {formData.vaccinations.map((v, i) => (
+              <div key={i} className="bg-white p-4 rounded-xl border mb-3 relative shadow-sm">
+                <input name="vaccineName" placeholder="Vaccine Name" value={v.vaccineName} onChange={(e) => updateArrayField(i, "vaccinations", e)} className="w-full mb-2 border-b outline-none text-sm" />
+                <div className="flex gap-2 items-center">
+                  <input type="number" name="doseNumber" value={v.doseNumber} onChange={(e) => updateArrayField(i, "vaccinations", e)} className="w-1/4 p-2 bg-slate-50 rounded text-xs" />
+                  <input type="date" name="dateGiven" value={v.dateGiven} onChange={(e) => updateArrayField(i, "vaccinations", e)} className="w-3/4 p-2 bg-slate-50 rounded text-xs" />
+                </div>
+                {formData.vaccinations.length > 1 && <RemoveBtn onClick={() => removeRow(i, "vaccinations")} />}
+              </div>
+            ))}
+          </ArrayField>
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-xl py-4 px-4 rounded-xl mt-6 transition duration-300"
-          >
-            {loading ? "Creating..." : "CREATE PATIENT RECORD"}
-          </button>
-        </form>
-      </div>
+        {/* Follow-up */}
+        <div className="p-8 bg-amber-50 rounded-3xl border border-amber-200 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input label="Next Appointment" name="nextAppointment" type="datetime-local" value={formData.nextAppointment} onChange={handleChange} />
+          <TextArea label="Follow-up Reason" name="reason" value={formData.reason} onChange={handleChange} rows={2} />
+        </div>
+
+        <button type="submit" disabled={loading} className={`w-full py-5 rounded-2xl text-white text-xl font-bold transition-all shadow-lg active:scale-95 ${loading ? "bg-slate-400" : "bg-blue-600 hover:bg-black"}`}>
+          {loading ? "SYNCING..." : "SAVE PATIENT RECORD"}
+        </button>
+      </form>
     </div>
   );
 }
+
+/* --- Helpers --- */
+const Input = ({ label, ...props }) => (
+  <div className="flex flex-col">
+    <label className="text-xs font-bold text-slate-500 mb-1 ml-1 uppercase">{label}</label>
+    <input {...props} className="p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+  </div>
+);
+
+const Select = ({ label, options, ...props }) => (
+  <div className="flex flex-col">
+    <label className="text-xs font-bold text-slate-500 mb-1 ml-1 uppercase">{label}</label>
+    <select {...props} className="p-4 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+      <option value="">Choose...</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  </div>
+);
+
+const TextArea = ({ label, ...props }) => (
+  <div className="flex flex-col">
+    <label className="text-xs font-bold text-slate-500 mb-1 ml-1 uppercase">{label}</label>
+    <textarea {...props} className="p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" rows={props.rows || 3} />
+  </div>
+);
+
+const ArrayField = ({ title, children, onAdd, color }) => (
+  <div className={`p-6 rounded-3xl border ${color === 'purple' ? 'bg-purple-50 border-purple-100' : 'bg-emerald-50 border-emerald-100'}`}>
+    <div className="flex justify-between items-center mb-4">
+      <h4 className="font-bold text-slate-700">{title}</h4>
+      <button type="button" onClick={onAdd} className="text-[10px] font-bold bg-white px-3 py-1 border rounded-lg hover:bg-slate-50 uppercase">Add Entry</button>
+    </div>
+    {children}
+  </div>
+);
+
+const RemoveBtn = ({ onClick }) => (
+  <button type="button" onClick={onClick} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md">✕</button>
+);

@@ -21,7 +21,7 @@ export default function Header() {
 
           {/* Clinic Name */}
           <div className="text-2xl sm:text-3xl md:text-4xl font-black text-blue-800 tracking-tighter">
-            SAHLAN <span className="text-blue-500 font-extralight">CLINIC</span>
+            Kalkaal <span className="text-blue-500 font-extralight">CLINIC</span>
           </div>
 
           {/* Show button only if logged in (optional) */}

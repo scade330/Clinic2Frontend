@@ -14,12 +14,8 @@ import IntroPage from './pages/IntroPage.jsx'
 import AppointnmentViewPage from './pages/patient/AppointmentViewPage.jsx'
 import CreatePatient from './pages/patient/CreatePatient.jsx'
 import PatientListPage from "./pages/patient/PatientListPage.jsx"
-import CreatePharmacy from './pages/pharmacy/CreatePharmacyPage.jsx'
-import PharmacyEditPage from './pages/pharmacy/PharmacyEditPage.jsx'
-import PharmacyviewPage from './pages/pharmacy/PharmacyViewpage.jsx'
-import RecordSalePage from './pages/sales/RecordSalePage.jsx'
-import SalesDashboardPage from './pages/sales/SalesDashboard.jsx'
-import LowStockPage from './pages/pharmacy/LowStockPage.jsx'
+import PatientTransferPage from './pages/patient/PatientlistTransferPage.jsx'
+
 
 const router = createBrowserRouter([
   {
@@ -50,15 +46,9 @@ const router = createBrowserRouter([
         path: "/center",
         element: <CenterPage />
       }
-   
-       ,{
-        path: "/createpharmacy",
-        element: <CreatePharmacy />
-      },
-      {
-        path: "/pharmacyedit",
-        element: <PharmacyEditPage />
-      },
+   ,
+    
+    
    
        {
         path: "/report",
@@ -69,26 +59,10 @@ const router = createBrowserRouter([
         path: "/appointment",
         element: <AppointnmentViewPage/>
       },
-  
-   
-       {
-        path: "/pharmacyview",
-        element: <PharmacyviewPage/>
+   {
+        path: "/transfer",
+        element: <PatientTransferPage/>
       },
-          {
-        path: "/recordsale",
-        element: <RecordSalePage/>
-      },
-   
-          {
-        path: "/salesdashboard",
-        element: <SalesDashboardPage/>
-      }, 
-   
-          {
-        path: "/lowstockpage",
-        element: <LowStockPage/>
-      }, 
 
    
       
