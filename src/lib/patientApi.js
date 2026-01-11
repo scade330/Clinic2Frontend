@@ -1,122 +1,224 @@
 import axios from "axios";
 
-// Make sure BASE_URL has no trailing slash
+/* -------------------------------------------------
+   Base configuration
+------------------------------------------------- */
+
+// Ensure no trailing slash in env URL
 const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
-const API = `${BASE_URL}/api/patientsClinic2`;
+const API_BASE = `${BASE_URL}/api/patientsClinic2`;
 
 const api = axios.create({
-  baseURL: API,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true, // send cookies
+  baseURL: API_BASE,
+  withCredentials: true, // IMPORTANT: auth cookies
 });
 
-// Helper to normalize endpoints
-const endpoint = (path = "") => path.startsWith("/") ? path : `/${path}`;
-
-// ---------------- CREATE ----------------
+/* -------------------------------------------------
+   CREATE PATIENT
+------------------------------------------------- */
 export const createPatient = async (data) => {
   try {
-    const res = await api.post(endpoint("/"), data);
+    const res = await api.post("/", data, {
+      headers: { "Content-Type": "application/json" },
+    });
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to create patient"
+    );
   }
 };
 
-// ---------------- READ ALL ----------------
+/* -------------------------------------------------
+   GET ALL PATIENTS
+------------------------------------------------- */
 export const getAllPatients = async () => {
   try {
-    const res = await api.get(endpoint("/"));
+    const res = await api.get("/");
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch patients"
+    );
   }
 };
 
-// ---------------- READ ONE ----------------
+/* -------------------------------------------------
+   GET PATIENT BY ID
+------------------------------------------------- */
 export const getPatientById = async (id) => {
   try {
-    const res = await api.get(endpoint(`/${id}`));
+    const res = await api.get(`/${id}`);
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Patient not found"
+    );
   }
 };
 
-// ---------------- READ BY PHONE ----------------
+/* -------------------------------------------------
+   GET PATIENT BY PHONE
+------------------------------------------------- */
 export const getPatientByPhone = async (phone) => {
   try {
-    const res = await api.get(endpoint(`/search/by-phone?phone=${encodeURIComponent(phone)}`));
+    const res = await api.get(`/search/by-phone`, {
+      params: { phone },
+    });
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Patient not found"
+    );
   }
 };
 
-// ---------------- UPDATE ----------------
+/* -------------------------------------------------
+   UPDATE PATIENT
+------------------------------------------------- */
 export const updatePatient = async (id, data) => {
   try {
-    const res = await api.put(endpoint(`/${id}`), data);
+    const res = await api.put(`/${id}`, data, {
+      headers: { "Content-Type": "application/json" },
+    });
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to update patient"
+    );
   }
 };
 
-// ---------------- DELETE ----------------
+/* -------------------------------------------------
+   DELETE PATIENT
+------------------------------------------------- */
 export const deletePatient = async (id) => {
   try {
-    const res = await api.delete(endpoint(`/${id}`));
+    const res = await api.delete(`/${id}`);
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to delete patient"
+    );
   }
 };
 
-// ---------------- TREATMENTS ----------------
-export const addTreatment = async (patientId, treatment) => {
+/* -------------------------------------------------
+   LAB RESULT IMAGE UPLOAD (Cloudinary)
+------------------------------------------------- */
+export const uploadLabResultImage = async (patientId, file) => {
   try {
-    const res = await api.post(endpoint(`/${patientId}/treatment`), treatment);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await api.post(
+      `/${patientId}/lab-results`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Lab image upload failed"
+    );
+  }
+};
+
+/* -------------------------------------------------
+   DELETE LAB RESULT IMAGE
+------------------------------------------------- */
+export const deleteLabResultImage = async (patientId, imageId) => {
+  try {
+    const res = await api.delete(
+      `/${patientId}/lab-results/${imageId}`
+    );
+    return res.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Failed to delete lab image"
+    );
+  }
+};
+
+/* -------------------------------------------------
+   TREATMENTS
+------------------------------------------------- */
+export const addTreatment = async (patientId, treatment) => {
+  try {
+    const res = await api.post(
+      `/${patientId}/treatment`,
+      treatment,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return res.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Failed to add treatment"
+    );
   }
 };
 
 export const deleteTreatment = async (patientId, index) => {
   try {
-    const res = await api.delete(endpoint(`/${patientId}/treatment/${index}`));
+    const res = await api.delete(
+      `/${patientId}/treatment/${index}`
+    );
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to delete treatment"
+    );
   }
 };
 
-// ---------------- VACCINATIONS ----------------
+/* -------------------------------------------------
+   VACCINATIONS
+------------------------------------------------- */
 export const addVaccination = async (patientId, vaccination) => {
   try {
-    const res = await api.post(endpoint(`/${patientId}/vaccination`), vaccination);
+    const res = await api.post(
+      `/${patientId}/vaccination`,
+      vaccination,
+      { headers: { "Content-Type": "application/json" } }
+    );
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to add vaccination"
+    );
   }
 };
 
 export const deleteVaccination = async (patientId, index) => {
   try {
-    const res = await api.delete(endpoint(`/${patientId}/vaccination/${index}`));
+    const res = await api.delete(
+      `/${patientId}/vaccination/${index}`
+    );
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to delete vaccination"
+    );
   }
 };
 
-// ---------------- FILTER ----------------
+/* -------------------------------------------------
+   FILTER BY PROVIDER TYPE
+------------------------------------------------- */
 export const getPatientsByProviderType = async (type) => {
   try {
-    const res = await api.get(endpoint(`/filter?type=${encodeURIComponent(type)}`));
+    const res = await api.get(`/filter`, {
+      params: { type },
+    });
     return res.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
+    throw new Error(
+      error.response?.data?.message || "Failed to filter patients"
+    );
   }
 };
